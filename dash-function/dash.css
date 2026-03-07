@@ -1,0 +1,125 @@
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --income: #22c55e;
+  --expense: #ef4444;
+  --accent: #3b82f6;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 17px;
+}
+
+.container {
+  max-width: 600px;
+  margin: auto;
+}
+
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+form#form input,
+form#form select,
+form#form button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+form#form button {
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+/* Small buttons in list */
+li button {
+  width: auto;
+  padding: 6px 10px;
+  margin-left: 10px;
+  background: transparent;
+  color: var(--text);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.color-text {
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* Logout button (top-right) */
+button.logout {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.12),
+    rgba(59, 130, 246, 0.06)
+  );
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    opacity 120ms ease;
+  font-weight: 600;
+}
+
+button.logout:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.18),
+    rgba(59, 130, 246, 0.08)
+  );
+}
+
+button.logout:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 520px) {
+  button.logout {
+    top: auto;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 14px;
+  }
+}

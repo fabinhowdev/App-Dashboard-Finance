@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="cadastro-dash/src/styles/cadastro.css" />
+    <title>Finance Dashboard</title>
+  </head>
+  <body>
+    <main id="form_container">
+      <div id="form_header">
+        <h1 id="form_title">Finance Dashboard</h1>
+      </div>
+
+      <form id="form" action="" data-redirect="dash-function/dash.html">
+        <div id="input_container">
+          <div class="input-box">
+            <label for="email" class="form-label">E-mail</label>
+            <div class="input-field">
+              <input
+                type="email"
+                name="email"
+                id="email"
+                class="form-control"
+                placeholder="exemplo@gmail.com"
+              />
+              <i class="fa-regular fa-envelope"></i>
+            </div>
+            <span class="error"></span>
+          </div>
+
+          <div class="input-box">
+            <label for="password" class="form-label">Senha</label>
+            <div class="input-field">
+              <input
+                type="password"
+                name="password"
+                id="password"
+                class="form-control"
+                placeholder="*******"
+              />
+              <i class="fa-regular fa-eye-slash password-icon"></i>
+            </div>
+            <span class="error"></span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-default login">
+          <i class="fa-solid fa-check"></i>
+          Entrar
+        </button>
+
+        <div class="register-link">
+          <p>
+            Não tem uma conta ?
+            <a href="cadastro-dash/cadastro.html">cadastre-se</a>
+          </p>
+        </div>
+      </form>
+    </main>
+
+    <script type="module" src="src/js/login.js"></script>
+  </body>
+</html>
