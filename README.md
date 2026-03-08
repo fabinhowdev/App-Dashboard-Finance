@@ -31,24 +31,7 @@ JavaScript
 Boxicons
 
 Git & GitHub
-
-📂 Estrutura do Projeto
-App-Dashboard-Finance
-│
-├── index.html
-├── login-dash/
-│   ├── login.html
-│   ├── login.css
-│
-├── cadastro-dash/
-│   ├── cadastro.html
-│
-├── dash-function/
-│   ├── index.html
-│   ├── style.css
-│   ├── script.js
-│
-└── assets/
+////////////
 
 
 👨‍💻 Autor
