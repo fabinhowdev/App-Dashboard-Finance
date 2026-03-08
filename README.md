@@ -31,7 +31,6 @@ JavaScript
 Boxicons
 
 Git & GitHub
-////////////
 
 
 👨‍💻 Autor
