@@ -8,8 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.FinanceApi?.resolveApiBase(form.dataset.apiPrefix || "") ||
     (form.dataset.apiPrefix || "");
   const submitButton = form.querySelector('button[type="submit"]');
-  const loginRequest = buildApiRequest("auth_login.php", apiPrefix);
-  const statusRequest = buildApiRequest("auth_status.php", apiPrefix);
+  const loginRequest = buildApiRequest("auth_login", apiPrefix);
+  const statusRequest = buildApiRequest("auth_status", apiPrefix);
 
   setupPasswordToggle();
   checkExistingSession();
@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(loginRequest.url, {
         method: "POST",
         credentials: loginRequest.credentials,
-        body: new FormData(form),
+        body: new URLSearchParams(new FormData(form)),
       });
       const payload = await parseJsonResponse(response);
 
@@ -32,7 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       setStatus(payload.message || "Login realizado com sucesso!", "success");
-      window.location.href = payload.redirect || redirect;
+      window.location.href = resolveRedirectTarget(
+        payload.redirect,
+        redirect,
+        apiPrefix,
+        loginRequest.url,
+      );
     } catch (error) {
       setStatus(error.message || "Não foi possível fazer login.", "error");
     } finally {
@@ -79,6 +84,29 @@ function buildApiRequest(endpoint, fallbackPrefix = "") {
   return { url, credentials };
 }
 
+function resolveRedirectTarget(serverRedirect, fallbackRedirect, apiPrefix, requestUrl) {
+  const redirectText = String(serverRedirect || "").trim();
+  if (!redirectText) {
+    return fallbackRedirect;
+  }
+
+  // API externa não deve controlar redirecionamento de rota do frontend.
+  try {
+    const apiOrigin = new URL(requestUrl, window.location.href).origin;
+    if (apiOrigin !== window.location.origin) {
+      return fallbackRedirect;
+    }
+  } catch (_) {
+    return fallbackRedirect;
+  }
+
+  try {
+    return new URL(redirectText, new URL(apiPrefix || "./", window.location.href)).toString();
+  } catch (_) {
+    return fallbackRedirect;
+  }
+}
+
 function setupPasswordToggle() {
   const passwordIcons = document.querySelectorAll(".password-icon");
 
@@ -113,13 +141,13 @@ async function parseJsonResponse(response) {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
 
   if (text.startsWith("<?php")) {
-    throw new Error("Servidor atual não executa PHP.");
+    throw new Error("Backend não executou o endpoint da API.");
   }
 
   const startsWithHtml = /^<!doctype html|^<html/i.test(text);
   if (startsWithHtml || (contentType.includes("text/html") && text.startsWith("<"))) {
     throw new Error(
-      "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+      "Servidor retornou HTML em vez de JSON. Verifique a rota da API no deploy.",
     );
   }
 

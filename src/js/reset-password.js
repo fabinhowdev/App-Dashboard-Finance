@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitButton = form.querySelector('button[type="submit"]');
   const tokenInput = document.getElementById("token");
   const urlToken = new URLSearchParams(window.location.search).get("token") || "";
-  const resetRequest = buildApiRequest("auth_reset_password.php", apiPrefix);
+  const resetRequest = buildApiRequest("auth_reset_password", apiPrefix);
 
   setupPasswordToggle();
 
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(resetRequest.url, {
         method: "POST",
         credentials: resetRequest.credentials,
-        body: new FormData(form),
+        body: new URLSearchParams(new FormData(form)),
       });
       const payload = await parseJsonResponse(response);
 
@@ -105,13 +105,13 @@ async function parseJsonResponse(response) {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
 
   if (text.startsWith("<?php")) {
-    throw new Error("Servidor atual não executa PHP.");
+    throw new Error("Backend não executou o endpoint da API.");
   }
 
   const startsWithHtml = /^<!doctype html|^<html/i.test(text);
   if (startsWithHtml || (contentType.includes("text/html") && text.startsWith("<"))) {
     throw new Error(
-      "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+      "Servidor retornou HTML em vez de JSON. Verifique a rota da API no deploy.",
     );
   }
 

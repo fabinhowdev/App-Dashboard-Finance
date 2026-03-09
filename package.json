@@ -1,0 +1,24 @@
+{
+  "name": "app-dashboard-finance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Finance dashboard with Netlify Functions + Netlify DB (Postgres/Neon).",
+  "scripts": {
+    "start": "npx netlify dev",
+    "db:init": "npm exec --package=netlify-cli@23 --package=node@20 -- netlify db init --assume-no",
+    "db:status": "npm exec --package=netlify-cli@23 --package=node@20 -- netlify db status",
+    "db:push": "drizzle-kit push --config drizzle.config.cjs",
+    "db:studio": "drizzle-kit studio --config drizzle.config.cjs",
+    "check:js": "node --check src/js/login.js && node --check src/js/forgot-password.js && node --check src/js/reset-password.js && node --check src/js/runtime-config.js && node --check cadastro-dash/src/javascript/cadastro.js && node --check dash-function/script.js"
+  },
+  "dependencies": {
+    "@netlify/neon": "^0.1.2",
+    "bcryptjs": "^3.0.2",
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.6",
+    "netlify-cli": "^17.38.1"
+  }
+}

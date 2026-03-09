@@ -1,7 +1,7 @@
 (() => {
   const globalConfig = window;
   // Exemplo em produção: globalConfig.__API_BASE_URL__ = "https://api.seudominio.com/";
-  globalConfig.__API_BASE_URL__ = globalConfig.__API_BASE_URL__ || "";
+  globalConfig.__API_BASE_URL__ = globalConfig.__API_BASE_URL__ || "/.netlify/functions/";
 
   function normalize(value) {
     return String(value || "").trim();

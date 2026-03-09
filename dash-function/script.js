@@ -20,8 +20,8 @@ const loginPage = "../index.html";
 const defaultApiPrefix = document.body?.dataset.apiPrefix || "../";
 const apiBase =
   window.FinanceApi?.resolveApiBase(defaultApiPrefix) || defaultApiPrefix;
-const authStatusRequest = buildApiRequest("auth_status.php", apiBase);
-const logoutRequest = buildApiRequest("auth_logout.php", apiBase);
+const authStatusRequest = buildApiRequest("auth_status", apiBase);
+const logoutRequest = buildApiRequest("auth_logout", apiBase);
 const welcomeUserEl = document.getElementById("welcome_user");
 const logoutButton = document.getElementById("logout_btn");
 const incomeTotalEl = document.getElementById("total_income");

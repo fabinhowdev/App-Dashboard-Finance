@@ -34,34 +34,82 @@ Git & GitHub
 
 ## Deploy
 
-Este projeto possui backend em PHP (`auth_*.php`, `salvar.php`) para login/cadastro/sessão.
-Por isso, **deploy estático puro (ex.: Netlify sem Functions)** não executa essas rotas e o frontend não recebe JSON válido.
+O projeto foi migrado para **Netlify Functions + Netlify DB (Neon/PostgreSQL)**.
+As páginas frontend chamam os endpoints em `/.netlify/functions/*`.
 
-Para funcionar em produção, use uma das opções:
+### 1) Pré-requisitos
 
-1. Hospedar frontend + PHP em um servidor com suporte a PHP/MySQL (Apache/Nginx + PHP-FPM).
-2. Manter frontend no Netlify e mover a API para outro host com PHP, ajustando o prefixo da API no frontend.
-3. Reescrever as rotas PHP como funções serverless compatíveis com a plataforma escolhida.
+- Node.js 20+ (recomendado para uso do Netlify CLI)
+- Conta Netlify conectada ao repositório
 
-### Opção 2 (Netlify + API PHP externa)
+### 2) Instalar dependências
 
-No frontend, configure a base da API no arquivo `src/js/runtime-config.js` antes do deploy:
-
-```js
-window.__API_BASE_URL__ = "https://sua-api.exemplo.com/";
+```bash
+npm install
 ```
 
-No backend PHP, configure as variáveis de ambiente:
+### 3) Provisionar banco no Netlify
 
-- `APP_FRONTEND_URL=https://seu-site.netlify.app`
-- `CORS_ALLOW_ORIGINS=https://seu-site.netlify.app`
-- `COOKIE_SAMESITE=None`
+Com o projeto já conectado no Netlify:
+
+```bash
+npm run db:init
+```
+
+Isso cria e conecta o Postgres do Netlify DB (Neon) ao site.
+
+### 4) Subir schema no banco
+
+```bash
+npm run db:push
+```
+
+O schema também está em `db/schema.sql` para referência.
+
+### 5) Variáveis de ambiente (Site settings > Environment variables)
+
+Obrigatória:
+
+- `NETLIFY_DATABASE_URL` (criada automaticamente pelo `netlify db init`)
+
+Opcionais:
+
+- `APP_FRONTEND_URL=https://seu-site.netlify.app` (base para links de reset de senha)
+- `CORS_ALLOW_ORIGINS=https://seu-site.netlify.app` (somente se usar outro domínio para frontend)
+- `ENABLE_DEBUG_RESET_URL=true` (exibe link de reset no frontend para testes)
+- `COOKIE_NAME=finance_session`
+- `COOKIE_SAMESITE=Lax`
 - `COOKIE_SECURE=true`
 
-Observações:
+### 6) Deploy
 
-- `APP_FRONTEND_URL` também é usado para montar o link de redefinição de senha enviado por e-mail.
-- Em produção HTTPS, `SameSite=None` exige `Secure=true` para o cookie de sessão funcionar entre domínios.
+No Netlify, use:
+
+- Build command: *(vazio)*
+- Publish directory: `.`
+
+O arquivo `netlify.toml` já aponta:
+
+- `publish = "."`
+- `functions = "netlify/functions"`
+
+### Endpoints serverless
+
+- `/.netlify/functions/salvar`
+- `/.netlify/functions/auth_login`
+- `/.netlify/functions/auth_status`
+- `/.netlify/functions/auth_logout`
+- `/.netlify/functions/auth_forgot_password`
+- `/.netlify/functions/auth_reset_password`
+
+### Compatibilidade de Node local
+
+Se seu ambiente local estiver em Node 18, o script `db:init` já usa internamente um runtime Node 20 para executar o comando moderno do Netlify DB.
+
+### Observação importante
+
+Os arquivos PHP (`auth_*.php`, `salvar.php`) foram mantidos apenas como legado/local.
+No deploy em Netlify, o fluxo principal usa as Functions JS acima.
 
 
 👨‍💻 Autor

@@ -223,30 +223,30 @@ async function submitRegistration(formElement) {
   const apiPrefix =
     window.FinanceApi?.resolveApiBase(formElement.dataset.apiPrefix || "") ||
     (formElement.dataset.apiPrefix || "");
-  const endpoint = formElement.getAttribute("action") || "salvar.php";
+  const endpoint = formElement.getAttribute("action") || "salvar";
   const submitRequest = buildApiRequest(endpoint, apiPrefix);
 
   try {
     const response = await fetch(submitRequest.url, {
       method: "POST",
       credentials: submitRequest.credentials,
-      body: new FormData(formElement),
+      body: new URLSearchParams(new FormData(formElement)),
     });
     const rawResponse = await response.text();
     const message = rawResponse.trim();
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
 
-    // Quando a página roda em servidor estático, o PHP não executa e costuma voltar o código-fonte.
+    // Se o endpoint não executar, alguns hosts retornam código-fonte em vez de JSON.
     if (message.startsWith("<?php")) {
       throw new Error(
-        "Servidor atual não executa PHP. Rode o projeto em Apache/XAMPP ou php -S.",
+        "Backend não executou o endpoint da API.",
       );
     }
 
     const startsWithHtml = /^<!doctype html|^<html/i.test(message);
     if (startsWithHtml || (contentType.includes("text/html") && message.startsWith("<"))) {
       throw new Error(
-        "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+        "Servidor retornou HTML em vez de JSON. Verifique a rota da API no deploy.",
       );
     }
 
