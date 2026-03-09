@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_normalized
+    ON users ((LOWER(BTRIM(email))));
+
 CREATE TABLE IF NOT EXISTS auth_sessions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -31,3 +34,15 @@ CREATE TABLE IF NOT EXISTS password_resets (
 
 CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON password_resets (user_id);
 CREATE INDEX IF NOT EXISTS idx_password_resets_expires ON password_resets (expires_at);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+    type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions (created_at);

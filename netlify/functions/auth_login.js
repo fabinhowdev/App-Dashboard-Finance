@@ -46,7 +46,8 @@ exports.handler = async (event) => {
     const users = await sql`
       SELECT id, nome, email, genero, senha_hash
       FROM users
-      WHERE email = ${email}
+      WHERE LOWER(BTRIM(email)) = ${email}
+      ORDER BY id DESC
       LIMIT 1
     `;
     const user = users[0];

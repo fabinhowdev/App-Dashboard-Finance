@@ -78,13 +78,38 @@ exports.handler = async (event) => {
 
     const senhaHash = await bcrypt.hash(senha, 10);
 
-    const inserted = await sql`
-      INSERT INTO users (nome, sobrenome, nascimento, email, senha_hash, genero)
-      VALUES (${nome}, ${sobrenome}, ${nascimento}, ${email}, ${senhaHash}, ${genero})
-      RETURNING id
-    `;
+    const inserted = await sql.begin(async (tx) => {
+      // Serializa cadastro por e-mail normalizado para evitar duplicidade por corrida.
+      await tx`SELECT pg_advisory_xact_lock(hashtext(${email}))`;
 
-    const insertedId = inserted[0]?.id;
+      const existing = await tx`
+        SELECT id
+        FROM users
+        WHERE LOWER(BTRIM(email)) = ${email}
+        LIMIT 1
+      `;
+
+      if (existing[0]) {
+        return null;
+      }
+
+      const rows = await tx`
+        INSERT INTO users (nome, sobrenome, nascimento, email, senha_hash, genero)
+        VALUES (${nome}, ${sobrenome}, ${nascimento}, ${email}, ${senhaHash}, ${genero})
+        RETURNING id
+      `;
+
+      return rows[0] || null;
+    });
+
+    if (!inserted) {
+      return json(event, 409, {
+        success: false,
+        message: "Este e-mail ja esta cadastrado.",
+      });
+    }
+
+    const insertedId = inserted.id;
     if (!insertedId) {
       throw new Error("Insert sem id retornado.");
     }

@@ -1,9 +1,28 @@
 const { ensureSchema, getSql } = require("./_lib/db");
 const { getEnvBoolean } = require("./_lib/env");
-const { json, methodNotAllowed, parseRequestBody, preflight } = require("./_lib/http");
+const {
+  getHeaderCaseInsensitive,
+  json,
+  methodNotAllowed,
+  parseRequestBody,
+  preflight,
+} = require("./_lib/http");
 const { buildResetPasswordUrl } = require("./_lib/links");
 const { logResetEmail } = require("./_lib/mail");
 const { randomHex, sha256 } = require("./_lib/security");
+
+function isLocalRequest(event) {
+  const host = String(
+    getHeaderCaseInsensitive(event.headers, "x-forwarded-host")
+      || getHeaderCaseInsensitive(event.headers, "host")
+      || "",
+  ).toLowerCase();
+
+  return host.includes("localhost")
+    || host.includes("127.0.0.1")
+    || host.includes("[::1]")
+    || host.includes("::1");
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
@@ -33,7 +52,8 @@ exports.handler = async (event) => {
     const users = await sql`
       SELECT id, email
       FROM users
-      WHERE email = ${email}
+      WHERE LOWER(BTRIM(email)) = ${email}
+      ORDER BY id DESC
       LIMIT 1
     `;
     const user = users[0];
@@ -55,7 +75,7 @@ exports.handler = async (event) => {
       logResetEmail(email, resetUrl);
 
       const allowDebug = getEnvBoolean("ENABLE_DEBUG_RESET_URL", false);
-      if (allowDebug) {
+      if (allowDebug || isLocalRequest(event)) {
         debugResetUrl = resetUrl;
       }
     }

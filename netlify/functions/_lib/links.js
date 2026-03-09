@@ -7,6 +7,18 @@ function normalizeBaseUrl(value) {
   return input.replace(/\/+$/, "");
 }
 
+function normalizeOriginHeader(value) {
+  const input = String(value || "").trim();
+  if (!input) return "";
+
+  try {
+    const url = new URL(input);
+    return normalizeBaseUrl(url.origin);
+  } catch (_) {
+    return "";
+  }
+}
+
 function buildBaseUrlFromEvent(event) {
   const host = getHeaderCaseInsensitive(event.headers, "x-forwarded-host")
     || getHeaderCaseInsensitive(event.headers, "host");
@@ -17,6 +29,9 @@ function buildBaseUrlFromEvent(event) {
 }
 
 function getFrontendBaseUrl(event) {
+  const fromOrigin = normalizeOriginHeader(getHeaderCaseInsensitive(event.headers, "origin"));
+  if (fromOrigin) return fromOrigin;
+
   const explicit = normalizeBaseUrl(getEnv("APP_FRONTEND_URL", ""));
   if (explicit) return explicit;
 

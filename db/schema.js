@@ -1,4 +1,14 @@
-const { pgTable, serial, text, timestamp, date, integer, uniqueIndex } = require("drizzle-orm/pg-core");
+const {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  date,
+  integer,
+  numeric,
+  index,
+  uniqueIndex,
+} = require("drizzle-orm/pg-core");
 
 const users = pgTable(
   "users",
@@ -38,8 +48,27 @@ const passwordResets = pgTable("password_resets", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+const transactions = pgTable(
+  "transactions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    type: text("type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_transactions_user_id").on(table.userId),
+    createdAtIdx: index("idx_transactions_created_at").on(table.createdAt),
+  }),
+);
+
 module.exports = {
   users,
   authSessions,
   passwordResets,
+  transactions,
 };

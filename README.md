@@ -101,6 +101,7 @@ O arquivo `netlify.toml` já aponta:
 - `/.netlify/functions/auth_logout`
 - `/.netlify/functions/auth_forgot_password`
 - `/.netlify/functions/auth_reset_password`
+- `/.netlify/functions/transactions` (GET/POST/DELETE)
 
 ### Compatibilidade de Node local
 
@@ -110,6 +111,7 @@ Se seu ambiente local estiver em Node 18, o script `db:init` já usa internament
 
 Os arquivos PHP (`auth_*.php`, `salvar.php`) foram mantidos apenas como legado/local.
 No deploy em Netlify, o fluxo principal usa as Functions JS acima.
+As transacoes do dashboard sao persistidas no Postgres (na tabela `transactions`).
 
 
 👨‍💻 Autor

@@ -1,47 +1,55 @@
 let transactions = [];
-try {
-  const raw = localStorage.getItem("transactions");
-  transactions = raw ? JSON.parse(raw) : [];
-  if (!Array.isArray(transactions)) transactions = [];
-  // sanitize stored items
-  transactions = transactions
-    .map((t) => ({
-      description: String(t.description || "").trim(),
-      amount: Number(t.amount) || 0,
-      type: t.type === "expense" ? "expense" : "income",
-    }))
-    .filter((t) => t.description && isFinite(t.amount));
-} catch (e) {
-  transactions = [];
-}
 let chart;
 
+const LEGACY_STORAGE_KEY = "transactions";
 const loginPage = "../index.html";
 const defaultApiPrefix = document.body?.dataset.apiPrefix || "../";
 const apiBase =
   window.FinanceApi?.resolveApiBase(defaultApiPrefix) || defaultApiPrefix;
 const authStatusRequest = buildApiRequest("auth_status", apiBase);
 const logoutRequest = buildApiRequest("auth_logout", apiBase);
+const transactionsRequest = buildApiRequest("transactions", apiBase);
 const welcomeUserEl = document.getElementById("welcome_user");
 const userProfileEl = document.getElementById("user_profile");
 const logoutButton = document.getElementById("logout_btn");
 const incomeTotalEl = document.getElementById("total_income");
 const expenseTotalEl = document.getElementById("total_expense");
 const txCountEl = document.getElementById("tx_count");
+const balanceEl = document.getElementById("balance");
+const listEl = document.getElementById("list");
+const formEl = document.getElementById("form");
 
-verifyAuthenticatedUser();
-setupLogout();
+initDashboard();
 
 function parseAmount(value) {
   const normalized = String(value).trim().replace(",", ".");
   return Number(normalized);
 }
 
-const balanceEl = document.getElementById("balance");
-const listEl = document.getElementById("list");
+function readLegacyTransactions() {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) return [];
 
-function save() {
-  localStorage.setItem("transactions", JSON.stringify(transactions));
+    return list
+      .map((item) => ({
+        description: String(item.description || "").trim(),
+        amount: Number(item.amount) || 0,
+        type: item.type === "expense" ? "expense" : "income",
+      }))
+      .filter((item) => item.description && Number.isFinite(item.amount) && item.amount > 0);
+  } catch (_) {
+    return [];
+  }
+}
+
+function clearLegacyTransactions() {
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch (_) {
+    // Ignora falhas do storage para não bloquear o fluxo.
+  }
 }
 
 function updateBalance() {
@@ -140,7 +148,7 @@ function render() {
     return;
   }
 
-  transactions.forEach((t, index) => {
+  transactions.forEach((t) => {
     const li = document.createElement("li");
     li.className = "transaction-item";
 
@@ -168,7 +176,7 @@ function render() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "remove-btn";
-    btn.dataset.index = String(index);
+    btn.dataset.id = String(t.id);
     btn.setAttribute("aria-label", `Remover transação ${t.description}`);
     btn.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
 
@@ -182,71 +190,102 @@ function render() {
   updateChart();
 }
 
-function removeTransaction(index) {
-  transactions.splice(index, 1);
-  save();
-  render();
+function toTransactionItem(raw) {
+  const id = Number(raw?.id);
+  const description = String(raw?.description || "").trim();
+  const amount = Number(raw?.amount);
+  const type = raw?.type === "expense" ? "expense" : "income";
+
+  if (!Number.isInteger(id) || id <= 0) return null;
+  if (!description) return null;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  return { id, description, amount, type, created_at: raw?.created_at || null };
 }
 
-document.getElementById("form").addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const description = document.getElementById("description").value;
-  const amount = parseAmount(document.getElementById("amount").value);
-  const type = document.getElementById("type").value;
-  if (!description || !description.trim()) {
-    alert("Por favor insira uma descrição.");
-    return;
-  }
-
-  if (!isFinite(amount) || amount <= 0) {
-    alert("Insira um valor numérico maior que 0.");
-    return;
-  }
-
-  transactions.push({ description: description.trim(), amount, type });
-
-  save();
-  render();
-  this.reset();
-});
-
-// Allow submitting the form by pressing Enter on inputs/selects
-(function enableEnterSubmit() {
-  const formEl = document.getElementById("form");
-  if (!formEl) return;
-
-  formEl.addEventListener("keydown", function (e) {
-    if (e.key !== "Enter") return;
-
-    const tgt = e.target;
-    if (!tgt) return;
-
-    const tag = tgt.tagName;
-    if (tag !== "INPUT" && tag !== "SELECT") return;
-
-    // prevent accidental form double firing
-    e.preventDefault();
-
-    if (typeof formEl.requestSubmit === "function") {
-      formEl.requestSubmit();
-    } else {
-      const submitBtn = formEl.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.click();
-      else formEl.submit();
-    }
+async function loadTransactions() {
+  const response = await fetch(transactionsRequest.url, {
+    method: "GET",
+    credentials: transactionsRequest.credentials,
   });
-})();
 
-// Event delegation for remove buttons
-listEl.addEventListener("click", (e) => {
-  const btn = e.target.closest("button.remove-btn");
-  if (!btn) return;
-  const idx = Number(btn.dataset.index);
-  if (Number.isFinite(idx)) removeTransaction(idx);
-});
+  if (response.status === 401) {
+    window.location.href = loginPage;
+    return;
+  }
 
-render();
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Erro ao carregar transações.");
+  }
+
+  const items = Array.isArray(data.transactions) ? data.transactions : [];
+  transactions = items.map(toTransactionItem).filter(Boolean);
+}
+
+async function createTransaction(payload) {
+  const response = await fetch(transactionsRequest.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: transactionsRequest.credentials,
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 401) {
+    window.location.href = loginPage;
+    return null;
+  }
+
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Erro ao salvar transação.");
+  }
+
+  return toTransactionItem(data.transaction);
+}
+
+async function deleteTransaction(transactionId) {
+  const response = await fetch(transactionsRequest.url, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: transactionsRequest.credentials,
+    body: JSON.stringify({ id: transactionId }),
+  });
+
+  if (response.status === 401) {
+    window.location.href = loginPage;
+    return;
+  }
+
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || "Erro ao remover transação.");
+  }
+}
+
+async function migrateLegacyTransactionsIfNeeded() {
+  const legacy = readLegacyTransactions();
+  if (legacy.length === 0 || transactions.length > 0) {
+    return;
+  }
+
+  for (const tx of legacy) {
+    await createTransaction(tx);
+  }
+
+  clearLegacyTransactions();
+  await loadTransactions();
+}
+
+async function removeTransaction(transactionId) {
+  await deleteTransaction(transactionId);
+  transactions = transactions.filter((t) => t.id !== transactionId);
+  render();
+}
 
 async function verifyAuthenticatedUser() {
   try {
@@ -257,7 +296,7 @@ async function verifyAuthenticatedUser() {
 
     if (!response.ok || !data.authenticated) {
       window.location.href = loginPage;
-      return;
+      return false;
     }
 
     if (welcomeUserEl) {
@@ -269,8 +308,11 @@ async function verifyAuthenticatedUser() {
       const genderLabel = formatGenderLabel(data.user?.genero);
       userProfileEl.textContent = genderLabel ? `Gênero: ${genderLabel}` : "";
     }
+
+    return true;
   } catch (_) {
     window.location.href = loginPage;
+    return false;
   }
 }
 
@@ -333,3 +375,99 @@ function normalizeGender(value) {
 
   return aliases[normalized] || normalized;
 }
+
+async function initDashboard() {
+  if (!(await verifyAuthenticatedUser())) return;
+
+  setupLogout();
+
+  try {
+    await loadTransactions();
+    await migrateLegacyTransactionsIfNeeded();
+  } catch (error) {
+    alert(error.message || "Falha ao carregar dados.");
+  }
+
+  render();
+}
+
+if (formEl) {
+  formEl.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const description = document.getElementById("description").value;
+    const amount = parseAmount(document.getElementById("amount").value);
+    const type = document.getElementById("type").value;
+    if (!description || !description.trim()) {
+      alert("Por favor insira uma descrição.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Insira um valor numérico maior que 0.");
+      return;
+    }
+
+    const submitButton = formEl.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    try {
+      const created = await createTransaction({
+        description: description.trim(),
+        amount,
+        type,
+      });
+
+      if (created) {
+        transactions.unshift(created);
+        render();
+      }
+
+      this.reset();
+    } catch (error) {
+      alert(error.message || "Erro ao adicionar transação.");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
+  });
+
+  // Allow submitting the form by pressing Enter on inputs/selects
+  formEl.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+
+    const tgt = e.target;
+    if (!tgt) return;
+
+    const tag = tgt.tagName;
+    if (tag !== "INPUT" && tag !== "SELECT") return;
+
+    // prevent accidental form double firing
+    e.preventDefault();
+
+    if (typeof formEl.requestSubmit === "function") {
+      formEl.requestSubmit();
+    } else {
+      const submitBtn = formEl.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.click();
+      else formEl.submit();
+    }
+  });
+}
+
+// Event delegation for remove buttons
+listEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button.remove-btn");
+  if (!btn) return;
+  const txId = Number(btn.dataset.id);
+  if (!Number.isInteger(txId)) return;
+
+  try {
+    await removeTransaction(txId);
+  } catch (error) {
+    alert(error.message || "Erro ao remover transação.");
+  }
+});
