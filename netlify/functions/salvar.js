@@ -6,6 +6,26 @@ function isEmailValid(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
+const ALLOWED_GENDERS = new Set(["feminino", "masculino", "outro", "nao_informado"]);
+
+function normalizeGender(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const aliases = {
+    female: "feminino",
+    male: "masculino",
+    other: "outro",
+    "nao informado": "nao_informado",
+    "não informado": "nao_informado",
+    "nao-informado": "nao_informado",
+    "não-informado": "nao_informado",
+    "prefiro-nao-informar": "nao_informado",
+    "prefiro_nao_informar": "nao_informado",
+    prefer_not_to_say: "nao_informado",
+  };
+
+  return aliases[normalized] || normalized;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return preflight(event);
@@ -26,12 +46,19 @@ exports.handler = async (event) => {
     const email = String(body.email || "").trim().toLowerCase();
     const senha = String(body.password || "");
     const confirmar = String(body.confirm_password || "");
-    const genero = String(body.gender || "").trim();
+    const genero = normalizeGender(body.gender);
 
     if (!nome || !sobrenome || !nascimento || !email || !senha || !confirmar || !genero) {
       return json(event, 422, {
         success: false,
         message: "Preencha todos os campos obrigatorios.",
+      });
+    }
+
+    if (!ALLOWED_GENDERS.has(genero)) {
+      return json(event, 422, {
+        success: false,
+        message: "Genero invalido.",
       });
     }
 

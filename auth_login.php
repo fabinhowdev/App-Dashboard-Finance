@@ -80,5 +80,6 @@ json_response(200, [
         'id' => (int) $user['id'],
         'nome' => (string) ($user['nome'] ?? ''),
         'email' => (string) ($user['email'] ?? ''),
+        'genero' => (string) ($user['genero'] ?? ''),
     ],
 ]);

@@ -23,6 +23,7 @@ const apiBase =
 const authStatusRequest = buildApiRequest("auth_status", apiBase);
 const logoutRequest = buildApiRequest("auth_logout", apiBase);
 const welcomeUserEl = document.getElementById("welcome_user");
+const userProfileEl = document.getElementById("user_profile");
 const logoutButton = document.getElementById("logout_btn");
 const incomeTotalEl = document.getElementById("total_income");
 const expenseTotalEl = document.getElementById("total_expense");
@@ -263,6 +264,11 @@ async function verifyAuthenticatedUser() {
       const nome = data.user?.nome || data.user?.email || "usuário";
       welcomeUserEl.textContent = `Olá, ${nome}`;
     }
+
+    if (userProfileEl) {
+      const genderLabel = formatGenderLabel(data.user?.genero);
+      userProfileEl.textContent = genderLabel ? `Gênero: ${genderLabel}` : "";
+    }
   } catch (_) {
     window.location.href = loginPage;
   }
@@ -295,4 +301,35 @@ function buildApiRequest(endpoint, fallbackPrefix = "") {
     : "same-origin";
 
   return { url, credentials };
+}
+
+function formatGenderLabel(rawGender) {
+  const normalizedGender = normalizeGender(rawGender);
+
+  if (normalizedGender === "feminino") return "Feminino";
+  if (normalizedGender === "masculino") return "Masculino";
+  if (normalizedGender === "outro") return "Outro";
+  if (normalizedGender === "nao_informado") return "Prefiro não informar";
+  return "";
+}
+
+function normalizeGender(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (!normalized) return "";
+
+  const aliases = {
+    female: "feminino",
+    male: "masculino",
+    other: "outro",
+    "nao informado": "nao_informado",
+    "não informado": "nao_informado",
+    "nao-informado": "nao_informado",
+    "não-informado": "nao_informado",
+    "prefiro-nao-informar": "nao_informado",
+    "prefiro_nao_informar": "nao_informado",
+    prefer_not_to_say: "nao_informado",
+  };
+
+  return aliases[normalized] || normalized;
 }

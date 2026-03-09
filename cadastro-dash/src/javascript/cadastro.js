@@ -1,4 +1,17 @@
 const form = document.querySelector("#form");
+const allowedGenderValues = new Set(["feminino", "masculino", "outro", "nao_informado"]);
+const legacyGenderMap = {
+  female: "feminino",
+  male: "masculino",
+  other: "outro",
+  "prefiro-nao-informar": "nao_informado",
+  "prefiro_nao_informar": "nao_informado",
+  "nao informado": "nao_informado",
+  "nao-informado": "nao_informado",
+  "não informado": "nao_informado",
+  "não-informado": "nao_informado",
+  prefer_not_to_say: "nao_informado",
+};
 
 if (form) {
   form.addEventListener("submit", async function (e) {
@@ -61,20 +74,26 @@ if (form) {
       }
     }
 
-    const genders = document.getElementsByName("gender");
+    const genders = Array.from(document.querySelectorAll('input[name="gender"]'));
     const radioContainer = document.querySelector(".radio-container");
-    const genderErrorSpan = radioContainer.querySelector(".error");
-    const selectedGender = [...genders].find((input) => input.checked);
+    const genderErrorSpan = radioContainer?.querySelector(".error");
+    const selectedGender = genders.find((input) => input.checked);
+    const normalizedGender = normalizeGenderValue(selectedGender?.value);
 
-    if (!selectedGender) {
-      radioContainer.classList.add("invalid");
-      radioContainer.classList.remove("valid");
-      genderErrorSpan.innerHTML = `${errorIcon} Selecione um gênero!`;
+    if (!selectedGender || !allowedGenderValues.has(normalizedGender)) {
+      radioContainer?.classList.add("invalid");
+      radioContainer?.classList.remove("valid");
+      if (genderErrorSpan) {
+        genderErrorSpan.innerHTML = `${errorIcon} Selecione um gênero válido!`;
+      }
       formIsValid = false;
     } else {
-      radioContainer.classList.add("valid");
-      radioContainer.classList.remove("invalid");
-      genderErrorSpan.innerHTML = "";
+      selectedGender.value = normalizedGender;
+      radioContainer?.classList.add("valid");
+      radioContainer?.classList.remove("invalid");
+      if (genderErrorSpan) {
+        genderErrorSpan.innerHTML = "";
+      }
     }
 
     if (!formIsValid) return;
@@ -82,6 +101,29 @@ if (form) {
     await submitRegistration(form);
   });
 }
+
+const genderInputs = Array.from(document.querySelectorAll('input[name="gender"]'));
+const genderContainer = document.querySelector(".radio-container");
+const genderError = genderContainer?.querySelector(".error");
+
+genderInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    const normalizedValue = normalizeGenderValue(input.value);
+    const isValidValue = allowedGenderValues.has(normalizedValue);
+
+    if (!isValidValue) {
+      return;
+    }
+
+    input.value = normalizedValue;
+    genderContainer?.classList.remove("invalid");
+    genderContainer?.classList.add("valid");
+
+    if (genderError) {
+      genderError.innerHTML = "";
+    }
+  });
+});
 
 function isEmpty(value) {
   return value.trim() === "";
@@ -285,4 +327,9 @@ function buildApiRequest(endpoint, fallbackPrefix = "") {
     : "same-origin";
 
   return { url, credentials };
+}
+
+function normalizeGenderValue(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return legacyGenderMap[normalized] || normalized;
 }

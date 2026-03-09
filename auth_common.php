@@ -230,7 +230,7 @@ function ensure_auth_tables(mysqli $conn): void
 function get_user_by_email(mysqli $conn, string $email): ?array
 {
     $stmt = $conn->prepare(
-        'SELECT id, nome, email, senha
+        'SELECT id, nome, email, genero, senha
          FROM usuarios
          WHERE email = ?
          LIMIT 1'
@@ -247,7 +247,7 @@ function get_user_by_email(mysqli $conn, string $email): ?array
 function get_user_by_id(mysqli $conn, int $userId): ?array
 {
     $stmt = $conn->prepare(
-        'SELECT id, nome, email
+        'SELECT id, nome, email, genero
          FROM usuarios
          WHERE id = ?
          LIMIT 1'
@@ -267,6 +267,7 @@ function set_authenticated_session(array $user): void
     $_SESSION['user_id'] = (int) $user['id'];
     $_SESSION['user_nome'] = (string) ($user['nome'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+    $_SESSION['user_genero'] = (string) ($user['genero'] ?? '');
     $_SESSION['logged_at'] = time();
 }
 

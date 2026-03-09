@@ -20,6 +20,7 @@
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.22), transparent 34%),
     radial-gradient(circle at 90% 10%, rgba(129, 140, 248, 0.3), transparent 26%),
@@ -79,6 +80,13 @@ body {
   margin-top: 6px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.user-profile {
+  min-height: 1.1em;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #475569;
 }
 
 .btn-default {
@@ -339,16 +347,42 @@ select:focus {
 
 @media (max-width: 520px) {
   body {
-    padding: 14px;
+    padding: 12px;
+  }
+
+  #dashboard_container {
+    gap: 10px;
   }
 
   .dashboard-header {
+    padding: 14px;
     flex-direction: column;
     align-items: stretch;
   }
 
+  .dashboard-header .btn-default {
+    width: 100%;
+  }
+
   .summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid .surface {
+    padding: 14px;
+  }
+
+  input,
+  select {
+    font-size: 16px;
+  }
+
+  form#form .btn-default {
+    width: 100%;
+  }
+
+  .chart-box {
+    height: 220px;
   }
 
   .transaction-item {
@@ -369,5 +403,64 @@ select:focus {
   .remove-btn {
     grid-area: remove;
     justify-self: end;
+  }
+
+  .background-shapes {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 320px) {
+  body {
+    padding: 8px;
+  }
+
+  .dashboard-header {
+    padding: 12px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .welcome-user,
+  .user-profile {
+    font-size: 11px;
+  }
+
+  .summary-card {
+    padding: 12px;
+  }
+
+  .summary-card strong {
+    font-size: 1.05rem;
+  }
+
+  .dashboard-grid .surface,
+  .transactions-panel {
+    padding: 12px;
+  }
+
+  .section-title {
+    font-size: 13px;
+  }
+
+  label {
+    font-size: 11px;
+  }
+
+  .transaction-item {
+    padding: 9px 10px;
+    gap: 8px;
+  }
+
+  .transaction-title {
+    font-size: 13px;
   }
 }

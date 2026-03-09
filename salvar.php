@@ -5,6 +5,27 @@ include __DIR__ . '/auth_common.php';
 handle_api_preflight();
 include __DIR__ . '/conexao.php';
 
+const ALLOWED_GENDERS = ['feminino', 'masculino', 'outro', 'nao_informado'];
+
+function normalize_gender(string $value): string
+{
+    $normalized = strtolower(trim($value));
+    $aliases = [
+        'female' => 'feminino',
+        'male' => 'masculino',
+        'other' => 'outro',
+        'nao informado' => 'nao_informado',
+        'não informado' => 'nao_informado',
+        'nao-informado' => 'nao_informado',
+        'não-informado' => 'nao_informado',
+        'prefiro-nao-informar' => 'nao_informado',
+        'prefiro_nao_informar' => 'nao_informado',
+        'prefer_not_to_say' => 'nao_informado',
+    ];
+
+    return $aliases[$normalized] ?? $normalized;
+}
+
 function respond(int $statusCode, array $payload): void
 {
     json_response($statusCode, $payload);
@@ -23,7 +44,7 @@ $nascimento = trim($_POST['birthdate'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $senha = $_POST['password'] ?? '';
 $confirmar = $_POST['confirm_password'] ?? '';
-$genero = trim($_POST['gender'] ?? '');
+$genero = normalize_gender($_POST['gender'] ?? '');
 
 if (
     $nome === '' || $sobrenome === '' || $nascimento === '' ||
@@ -32,6 +53,13 @@ if (
     respond(422, [
         'success' => false,
         'message' => 'Preencha todos os campos obrigatórios.',
+    ]);
+}
+
+if (!in_array($genero, ALLOWED_GENDERS, true)) {
+    respond(422, [
+        'success' => false,
+        'message' => 'Gênero inválido.',
     ]);
 }
 

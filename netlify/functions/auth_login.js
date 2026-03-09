@@ -13,6 +13,7 @@ function sanitizeUser(user) {
     id: Number(user.id),
     nome: String(user.nome || ""),
     email: String(user.email || ""),
+    genero: String(user.genero || ""),
   };
 }
 
@@ -43,7 +44,7 @@ exports.handler = async (event) => {
     }
 
     const users = await sql`
-      SELECT id, nome, email, senha_hash
+      SELECT id, nome, email, genero, senha_hash
       FROM users
       WHERE email = ${email}
       LIMIT 1

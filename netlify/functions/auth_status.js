@@ -7,6 +7,7 @@ function sanitizeUser(user) {
     id: Number(user.id),
     nome: String(user.nome || ""),
     email: String(user.email || ""),
+    genero: String(user.genero || ""),
   };
 }
 

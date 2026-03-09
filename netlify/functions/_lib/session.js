@@ -66,7 +66,7 @@ async function getAuthenticatedUser(event, sql) {
 
   const tokenHash = sha256(token);
   const rows = await sql`
-    SELECT u.id, u.nome, u.email
+    SELECT u.id, u.nome, u.email, u.genero
     FROM auth_sessions s
     INNER JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash}

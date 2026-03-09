@@ -11,7 +11,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="src/styles/cadastro.css?v=20260308-3" />
+    <link rel="stylesheet" href="src/styles/cadastro.css?v=20260309-4" />
     <title>Criar conta</title>
   </head>
   <body class="page-cadastro">
@@ -93,43 +93,54 @@
               </div>
 
               <div class="radio-container span-2">
-                <label class="form-label"> Gênero </label>
+                <fieldset class="gender-fieldset">
+                  <legend class="form-label">Gênero</legend>
 
-                <div id="gender_inputs">
-                  <div class="radio-box">
-                    <input
-                      type="radio"
-                      name="gender"
-                      id="female"
-                      class="form-control"
-                      value="female"
-                      required
-                    />
-                    <label for="female" class="form-label"> Feminino </label>
-                  </div>
+                  <div id="gender_inputs">
+                    <div class="radio-box">
+                      <input
+                        type="radio"
+                        name="gender"
+                        id="gender_feminino"
+                        value="feminino"
+                        required
+                      />
+                      <label for="gender_feminino" class="form-label">Feminino</label>
+                    </div>
 
-                  <div class="radio-box">
-                    <input
-                      type="radio"
-                      name="gender"
-                      id="male"
-                      class="form-control"
-                      value="male"
-                    />
-                    <label for="male" class="form-label"> Masculino </label>
-                  </div>
+                    <div class="radio-box">
+                      <input
+                        type="radio"
+                        name="gender"
+                        id="gender_masculino"
+                        value="masculino"
+                      />
+                      <label for="gender_masculino" class="form-label">Masculino</label>
+                    </div>
 
-                  <div class="radio-box">
-                    <input
-                      type="radio"
-                      name="gender"
-                      id="other"
-                      class="form-control"
-                      value="other"
-                    />
-                    <label for="other" class="form-label"> Outro </label>
+                    <div class="radio-box">
+                      <input
+                        type="radio"
+                        name="gender"
+                        id="gender_outro"
+                        value="outro"
+                      />
+                      <label for="gender_outro" class="form-label">Outro</label>
+                    </div>
+
+                    <div class="radio-box">
+                      <input
+                        type="radio"
+                        name="gender"
+                        id="gender_nao_informado"
+                        value="nao_informado"
+                      />
+                      <label for="gender_nao_informado" class="form-label">
+                        Prefiro não informar
+                      </label>
+                    </div>
                   </div>
-                </div>
+                </fieldset>
 
                 <span class="error"></span>
               </div>
@@ -210,6 +221,6 @@
     </main>
 
     <script src="../src/js/runtime-config.js?v=20260309-2"></script>
-    <script src="src/javascript/cadastro.js?v=20260309-2"></script>
+    <script src="src/javascript/cadastro.js?v=20260309-4"></script>
   </body>
 </html>
