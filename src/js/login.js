@@ -4,8 +4,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const statusMessage = document.getElementById("status_message");
   const redirect = form.dataset.redirect || "dash-function/dash.html";
-  const apiPrefix = form.dataset.apiPrefix || "";
+  const apiPrefix =
+    window.FinanceApi?.resolveApiBase(form.dataset.apiPrefix || "") ||
+    (form.dataset.apiPrefix || "");
   const submitButton = form.querySelector('button[type="submit"]');
+  const loginRequest = buildApiRequest("auth_login.php", apiPrefix);
+  const statusRequest = buildApiRequest("auth_status.php", apiPrefix);
 
   setupPasswordToggle();
   checkExistingSession();
@@ -16,9 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (submitButton) submitButton.disabled = true;
 
     try {
-      const response = await fetch(`${apiPrefix}auth_login.php`, {
+      const response = await fetch(loginRequest.url, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: loginRequest.credentials,
         body: new FormData(form),
       });
       const payload = await parseJsonResponse(response);
@@ -38,8 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function checkExistingSession() {
     try {
-      const response = await fetch(`${apiPrefix}auth_status.php`, {
-        credentials: "same-origin",
+      const response = await fetch(statusRequest.url, {
+        credentials: statusRequest.credentials,
       });
       const payload = await parseJsonResponse(response);
 
@@ -62,6 +66,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (type) statusMessage.classList.add(type);
   }
 });
+
+function buildApiRequest(endpoint, fallbackPrefix = "") {
+  const api = window.FinanceApi;
+  const url = api?.buildApiUrl
+    ? api.buildApiUrl(endpoint, fallbackPrefix)
+    : new URL(endpoint, new URL(fallbackPrefix || "./", window.location.href)).toString();
+  const credentials = api?.getCredentialsMode
+    ? api.getCredentialsMode(url)
+    : "same-origin";
+
+  return { url, credentials };
+}
 
 function setupPasswordToggle() {
   const passwordIcons = document.querySelectorAll(".password-icon");
@@ -94,14 +110,22 @@ function setupPasswordToggle() {
 
 async function parseJsonResponse(response) {
   const text = (await response.text()).trim();
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
 
   if (text.startsWith("<?php")) {
     throw new Error("Servidor atual não executa PHP.");
   }
 
+  const startsWithHtml = /^<!doctype html|^<html/i.test(text);
+  if (startsWithHtml || (contentType.includes("text/html") && text.startsWith("<"))) {
+    throw new Error(
+      "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+    );
+  }
+
   try {
     return JSON.parse(text);
   } catch (_) {
-    throw new Error("Resposta inválida do servidor.");
+    throw new Error("Resposta inválida do servidor. Esperado JSON do backend.");
   }
 }

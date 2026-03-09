@@ -3,64 +3,113 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="api-base-url" content="" />
     <title>Finance Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
 
     <link rel="stylesheet" href="dash.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
-  <body>
-    <div class="container">
-      <div class="color-text">
-        <h1>💰 Finance Dashboard</h1>
-        <p id="welcome_user" class="welcome-user"></p>
-      </div>
+  <body data-api-prefix="../">
+    <main id="dashboard_container">
+      <header class="surface dashboard-header">
+        <div>
+          <h1>Finance Dashboard</h1>
+          <p id="welcome_user" class="welcome-user"></p>
+        </div>
+        <button id="logout_btn" class="btn-default" type="button">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          Sair
+        </button>
+      </header>
 
-      <div class="card">
-        <h3>Saldo: <span id="balance">R$ 0.00</span></h3>
-      </div>
+      <section class="summary-grid" aria-label="Resumo financeiro">
+        <article class="surface summary-card">
+          <span class="summary-label">Saldo atual</span>
+          <strong id="balance">R$ 0,00</strong>
+        </article>
+        <article class="surface summary-card">
+          <span class="summary-label">Receitas</span>
+          <strong id="total_income">R$ 0,00</strong>
+        </article>
+        <article class="surface summary-card">
+          <span class="summary-label">Despesas</span>
+          <strong id="total_expense">R$ 0,00</strong>
+        </article>
+        <article class="surface summary-card">
+          <span class="summary-label">Transações</span>
+          <strong id="tx_count">0</strong>
+        </article>
+      </section>
 
-      <div class="card">
-        <form id="form" aria-label="Adicionar transação">
-          <label for="description">Descrição</label>
-          <input
-            type="text"
-            id="description"
-            placeholder="Descrição"
-            required
-          />
+      <section class="dashboard-grid">
+        <article class="surface">
+          <h2 class="section-title">
+            <i class="fa-solid fa-plus"></i>
+            Nova transação
+          </h2>
+          <form id="form" aria-label="Adicionar transação">
+            <label for="description">Descrição</label>
+            <input type="text" id="description" placeholder="Descrição" required />
 
-          <label for="amount">Valor (R$)</label>
-          <input
-            type="number"
-            id="amount"
-            placeholder="Valor"
-            min="0.01"
-            step="0.01"
-            inputmode="decimal"
-            required
-          />
+            <label for="amount">Valor (R$)</label>
+            <input
+              type="number"
+              id="amount"
+              placeholder="Valor"
+              min="0.01"
+              step="0.01"
+              inputmode="decimal"
+              required
+            />
 
-          <label for="type">Tipo</label>
-          <select id="type">
-            <option value="income">Receita</option>
-            <option value="expense">Despesa</option>
-          </select>
+            <label for="type">Tipo</label>
+            <select id="type">
+              <option value="income">Receita</option>
+              <option value="expense">Despesa</option>
+            </select>
 
-          <button type="submit">Adicionar</button>
-        </form>
-      </div>
+            <button type="submit" class="btn-default">
+              <i class="fa-solid fa-check"></i>
+              Adicionar
+            </button>
+          </form>
+        </article>
 
-      <div class="card">
-        <canvas id="chart"></canvas>
-      </div>
+        <article class="surface chart-panel">
+          <h2 class="section-title">
+            <i class="fa-solid fa-chart-pie"></i>
+            Distribuição
+          </h2>
+          <div class="chart-box">
+            <canvas id="chart"></canvas>
+          </div>
+        </article>
 
-      <div class="card">
-        <ul id="list"></ul>
-      </div>
+        <article class="surface transactions-panel">
+          <h2 class="section-title">
+            <i class="fa-solid fa-list-ul"></i>
+            Movimentações
+          </h2>
+          <ul id="list" class="transactions-list"></ul>
+        </article>
+      </section>
+    </main>
+
+    <div class="background-shapes" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
-    <button id="logout_btn" class="logout" type="button">Sair</button>
 
-    <script type="module" src="script.js?v=20260308-1"></script>
+    <script src="../src/js/runtime-config.js?v=20260309-1"></script>
+    <script type="module" src="script.js?v=20260309-2"></script>
   </body>
 </html>

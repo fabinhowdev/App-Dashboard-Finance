@@ -5,9 +5,186 @@ const REMEMBER_COOKIE_NAME = 'finance_remember';
 const REMEMBER_TTL_SECONDS = 2592000; // 30 dias
 const RESET_TOKEN_TTL_SECONDS = 3600; // 1 hora
 
+function is_https_request(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((int) ($_SERVER['SERVER_PORT'] ?? 80) === 443);
+}
+
+function parse_origin(string $input): ?string
+{
+    $value = trim($input);
+    if ($value === '') {
+        return null;
+    }
+
+    $parts = parse_url($value);
+    if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+        return null;
+    }
+
+    $scheme = strtolower((string) $parts['scheme']);
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return null;
+    }
+
+    $host = strtolower((string) $parts['host']);
+    $port = isset($parts['port']) ? (int) $parts['port'] : null;
+    $defaultPort = $scheme === 'https' ? 443 : 80;
+
+    $origin = $scheme . '://' . $host;
+    if ($port !== null && $port !== $defaultPort) {
+        $origin .= ':' . $port;
+    }
+
+    return $origin;
+}
+
+function allowed_cors_origins(): array
+{
+    $origins = [];
+
+    $frontendUrl = trim((string) (getenv('APP_FRONTEND_URL') ?: ''));
+    if ($frontendUrl !== '') {
+        $frontendOrigin = parse_origin($frontendUrl);
+        if ($frontendOrigin !== null) {
+            $origins[] = $frontendOrigin;
+        }
+    }
+
+    $envOrigins = trim((string) (getenv('CORS_ALLOW_ORIGINS') ?: ''));
+    if ($envOrigins !== '') {
+        foreach (explode(',', $envOrigins) as $candidate) {
+            $origin = parse_origin($candidate);
+            if ($origin !== null) {
+                $origins[] = $origin;
+            }
+        }
+    }
+
+    return array_values(array_unique($origins));
+}
+
+function allowed_request_origin(): ?string
+{
+    $requestOrigin = parse_origin((string) ($_SERVER['HTTP_ORIGIN'] ?? ''));
+    if ($requestOrigin === null) {
+        return null;
+    }
+
+    $allowedOrigins = allowed_cors_origins();
+    if ($allowedOrigins === []) {
+        return null;
+    }
+
+    return in_array($requestOrigin, $allowedOrigins, true) ? $requestOrigin : null;
+}
+
+function apply_cors_headers(): void
+{
+    $origin = allowed_request_origin();
+    if ($origin === null) {
+        return;
+    }
+
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+}
+
+function handle_api_preflight(): void
+{
+    apply_cors_headers();
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+}
+
+function env_bool(string $name, ?bool $default = null): ?bool
+{
+    $raw = getenv($name);
+    if ($raw === false) {
+        return $default;
+    }
+
+    $value = strtolower(trim((string) $raw));
+    if (in_array($value, ['1', 'true', 'yes', 'on'], true)) {
+        return true;
+    }
+
+    if (in_array($value, ['0', 'false', 'no', 'off'], true)) {
+        return false;
+    }
+
+    return $default;
+}
+
+function cookie_same_site(): string
+{
+    $configured = strtolower(trim((string) (getenv('COOKIE_SAMESITE') ?: '')));
+    if ($configured === 'none') {
+        return 'None';
+    }
+    if ($configured === 'strict') {
+        return 'Strict';
+    }
+    if ($configured === 'lax') {
+        return 'Lax';
+    }
+
+    // Em requests cross-origin autorizados (Netlify -> API), SameSite precisa ser None.
+    return allowed_request_origin() !== null ? 'None' : 'Lax';
+}
+
+function cookie_secure(string $sameSite): bool
+{
+    $configured = env_bool('COOKIE_SECURE', null);
+    if ($configured !== null) {
+        return $configured;
+    }
+
+    // Cookies SameSite=None exigem Secure em navegadores modernos.
+    if ($sameSite === 'None') {
+        return true;
+    }
+
+    return is_https_request();
+}
+
+function session_cookie_params(): array
+{
+    $sameSite = cookie_same_site();
+
+    return [
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => cookie_secure($sameSite),
+        'httponly' => true,
+        'samesite' => $sameSite,
+    ];
+}
+
+function remember_cookie_params(int $expiresAt): array
+{
+    $sameSite = cookie_same_site();
+
+    return [
+        'expires' => $expiresAt,
+        'path' => '/',
+        'secure' => cookie_secure($sameSite),
+        'httponly' => true,
+        'samesite' => $sameSite,
+    ];
+}
+
 function json_response(int $statusCode, array $payload): void
 {
     http_response_code($statusCode);
+    apply_cors_headers();
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
@@ -16,13 +193,7 @@ function json_response(int $statusCode, array $payload): void
 function start_app_session(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
-        session_set_cookie_params([
-            'lifetime' => 0,
-            'path' => '/',
-            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
+        session_set_cookie_params(session_cookie_params());
         session_start();
     }
 }
@@ -111,13 +282,7 @@ function current_session_user(mysqli $conn): ?array
 
 function set_remember_cookie(string $cookieValue, int $expiresAt): void
 {
-    setcookie(REMEMBER_COOKIE_NAME, $cookieValue, [
-        'expires' => $expiresAt,
-        'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    setcookie(REMEMBER_COOKIE_NAME, $cookieValue, remember_cookie_params($expiresAt));
 }
 
 function issue_remember_token(mysqli $conn, int $userId): void
@@ -157,13 +322,7 @@ function clear_remember_cookie(mysqli $conn): void
         }
     }
 
-    setcookie(REMEMBER_COOKIE_NAME, '', [
-        'expires' => time() - 3600,
-        'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    setcookie(REMEMBER_COOKIE_NAME, '', remember_cookie_params(time() - 3600));
     unset($_COOKIE[REMEMBER_COOKIE_NAME]);
 }
 
@@ -274,8 +433,7 @@ function password_is_strong(string $password): bool
 
 function build_app_base_url(): string
 {
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || ((int) ($_SERVER['SERVER_PORT'] ?? 80) === 443);
+    $isHttps = is_https_request();
     $scheme = $isHttps ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
@@ -285,6 +443,16 @@ function build_app_base_url(): string
     }
 
     return $scheme . '://' . $host . $scriptDir;
+}
+
+function build_frontend_base_url(): string
+{
+    $configured = trim((string) (getenv('APP_FRONTEND_URL') ?: ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+
+    return build_app_base_url();
 }
 
 function is_local_environment(): bool
@@ -336,4 +504,3 @@ HTML;
 
     return $sent;
 }
-

@@ -1,14 +1,13 @@
 <?php
 declare(strict_types=1);
 
+include __DIR__ . '/auth_common.php';
+handle_api_preflight();
 include __DIR__ . '/conexao.php';
-header('Content-Type: application/json; charset=utf-8');
 
 function respond(int $statusCode, array $payload): void
 {
-    http_response_code($statusCode);
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-    exit;
+    json_response($statusCode, $payload);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

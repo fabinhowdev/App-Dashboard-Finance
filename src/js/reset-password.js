@@ -2,11 +2,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("reset_form");
   if (!form) return;
 
-  const apiPrefix = form.dataset.apiPrefix || "";
+  const apiPrefix =
+    window.FinanceApi?.resolveApiBase(form.dataset.apiPrefix || "") ||
+    (form.dataset.apiPrefix || "");
   const statusMessage = document.getElementById("status_message");
   const submitButton = form.querySelector('button[type="submit"]');
   const tokenInput = document.getElementById("token");
   const urlToken = new URLSearchParams(window.location.search).get("token") || "";
+  const resetRequest = buildApiRequest("auth_reset_password.php", apiPrefix);
 
   setupPasswordToggle();
 
@@ -34,9 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`${apiPrefix}auth_reset_password.php`, {
+      const response = await fetch(resetRequest.url, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: resetRequest.credentials,
         body: new FormData(form),
       });
       const payload = await parseJsonResponse(response);
@@ -68,6 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function buildApiRequest(endpoint, fallbackPrefix = "") {
+  const api = window.FinanceApi;
+  const url = api?.buildApiUrl
+    ? api.buildApiUrl(endpoint, fallbackPrefix)
+    : new URL(endpoint, new URL(fallbackPrefix || "./", window.location.href)).toString();
+  const credentials = api?.getCredentialsMode
+    ? api.getCredentialsMode(url)
+    : "same-origin";
+
+  return { url, credentials };
+}
+
 function setupPasswordToggle() {
   const passwordIcons = document.querySelectorAll(".password-icon");
   passwordIcons.forEach((icon) => {
@@ -87,14 +102,22 @@ function setupPasswordToggle() {
 
 async function parseJsonResponse(response) {
   const text = (await response.text()).trim();
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+
   if (text.startsWith("<?php")) {
     throw new Error("Servidor atual não executa PHP.");
+  }
+
+  const startsWithHtml = /^<!doctype html|^<html/i.test(text);
+  if (startsWithHtml || (contentType.includes("text/html") && text.startsWith("<"))) {
+    throw new Error(
+      "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+    );
   }
 
   try {
     return JSON.parse(text);
   } catch (_) {
-    throw new Error("Resposta inválida do servidor.");
+    throw new Error("Resposta inválida do servidor. Esperado JSON do backend.");
   }
 }
-

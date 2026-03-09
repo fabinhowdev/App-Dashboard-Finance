@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-include __DIR__ . '/conexao.php';
 include __DIR__ . '/auth_common.php';
+handle_api_preflight();
+include __DIR__ . '/conexao.php';
 
 start_app_session();
 ensure_auth_tables($conn);
@@ -81,4 +82,3 @@ json_response(200, [
         'email' => (string) ($user['email'] ?? ''),
     ],
 ]);
-

@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 if (!class_exists('mysqli')) {
     http_response_code(500);
+    if (function_exists('apply_cors_headers')) {
+        apply_cors_headers();
+    }
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => false,
@@ -24,6 +27,9 @@ try {
     $conn->set_charset('utf8mb4');
 } catch (mysqli_sql_exception $e) {
     http_response_code(500);
+    if (function_exists('apply_cors_headers')) {
+        apply_cors_headers();
+    }
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
         'success' => false,

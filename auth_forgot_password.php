@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-include __DIR__ . '/conexao.php';
 include __DIR__ . '/auth_common.php';
+handle_api_preflight();
+include __DIR__ . '/conexao.php';
 
 ensure_auth_tables($conn);
 
@@ -27,7 +28,7 @@ $debugResetUrl = null;
 $user = get_user_by_email($conn, $email);
 if ($user !== null) {
     $resetData = create_password_reset($conn, (int) $user['id']);
-    $baseUrl = build_app_base_url();
+    $baseUrl = build_frontend_base_url();
     $resetUrl = $baseUrl . '/login-dash/reset-password.html?token=' . urlencode((string) $resetData['token']);
 
     $sent = send_password_reset_email(
@@ -46,4 +47,3 @@ json_response(200, [
     'message' => $genericMessage,
     'debug_reset_url' => $debugResetUrl,
 ]);
-

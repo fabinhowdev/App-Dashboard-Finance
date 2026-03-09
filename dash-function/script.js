@@ -17,10 +17,16 @@ try {
 let chart;
 
 const loginPage = "../index.html";
-const authStatusUrl = "../auth_status.php";
-const logoutUrl = "../auth_logout.php";
+const defaultApiPrefix = document.body?.dataset.apiPrefix || "../";
+const apiBase =
+  window.FinanceApi?.resolveApiBase(defaultApiPrefix) || defaultApiPrefix;
+const authStatusRequest = buildApiRequest("auth_status.php", apiBase);
+const logoutRequest = buildApiRequest("auth_logout.php", apiBase);
 const welcomeUserEl = document.getElementById("welcome_user");
 const logoutButton = document.getElementById("logout_btn");
+const incomeTotalEl = document.getElementById("total_income");
+const expenseTotalEl = document.getElementById("total_expense");
+const txCountEl = document.getElementById("tx_count");
 
 verifyAuthenticatedUser();
 setupLogout();
@@ -38,14 +44,41 @@ function save() {
 }
 
 function updateBalance() {
+  const income = transactions
+    .filter((t) => t.type === "income")
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const expense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((acc, t) => acc + t.amount, 0);
+
   const balance = transactions.reduce(
     (acc, t) => (t.type === "income" ? acc + t.amount : acc - t.amount),
     0,
   );
+
   balanceEl.textContent = balance.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+  if (incomeTotalEl) {
+    incomeTotalEl.textContent = income.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  if (expenseTotalEl) {
+    expenseTotalEl.textContent = expense.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  if (txCountEl) {
+    txCountEl.textContent = String(transactions.length);
+  }
 }
 
 function updateChart() {
@@ -61,16 +94,34 @@ function updateChart() {
 
   if (chart) chart.destroy();
 
+  const hasValues = income > 0 || expense > 0;
+
   chart = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["Receitas", "Despesas"],
+      labels: hasValues ? ["Receitas", "Despesas"] : ["Sem dados", "Sem dados"],
       datasets: [
         {
-          data: [income, expense],
-          backgroundColor: ["#22c55e", "#ef4444"],
+          data: hasValues ? [income, expense] : [1, 1],
+          backgroundColor: hasValues ? ["#22c55e", "#ef4444"] : ["#e2e8f0", "#f1f5f9"],
+          borderWidth: 2,
+          borderColor: "#f8fafc",
         },
       ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: "#334155",
+            boxWidth: 14,
+            boxHeight: 14,
+          },
+        },
+      },
     },
   });
 }
@@ -78,20 +129,50 @@ function updateChart() {
 function render() {
   listEl.innerHTML = "";
 
+  if (transactions.length === 0) {
+    const li = document.createElement("li");
+    li.className = "empty-state";
+    li.textContent = "Nenhuma transação adicionada ainda.";
+    listEl.appendChild(li);
+    updateBalance();
+    updateChart();
+    return;
+  }
+
   transactions.forEach((t, index) => {
     const li = document.createElement("li");
+    li.className = "transaction-item";
 
-    const text = document.createElement("span");
-    text.textContent = `${t.description} - ${t.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+    const info = document.createElement("div");
+    info.className = "transaction-info";
+
+    const title = document.createElement("span");
+    title.className = "transaction-title";
+    title.textContent = t.description;
+
+    const meta = document.createElement("span");
+    meta.className = "transaction-meta";
+    meta.textContent = t.type === "income" ? "Receita" : "Despesa";
+
+    info.appendChild(title);
+    info.appendChild(meta);
+
+    const value = document.createElement("span");
+    value.className = `transaction-amount ${t.type}`;
+    value.textContent = t.amount.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "remove-btn";
     btn.dataset.index = String(index);
     btn.setAttribute("aria-label", `Remover transação ${t.description}`);
-    btn.textContent = "X";
+    btn.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
 
-    li.appendChild(text);
+    li.appendChild(info);
+    li.appendChild(value);
     li.appendChild(btn);
     listEl.appendChild(li);
   });
@@ -168,8 +249,8 @@ render();
 
 async function verifyAuthenticatedUser() {
   try {
-    const response = await fetch(authStatusUrl, {
-      credentials: "same-origin",
+    const response = await fetch(authStatusRequest.url, {
+      credentials: authStatusRequest.credentials,
     });
     const data = await response.json();
 
@@ -192,9 +273,9 @@ function setupLogout() {
 
   logoutButton.addEventListener("click", async () => {
     try {
-      await fetch(logoutUrl, {
+      await fetch(logoutRequest.url, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: logoutRequest.credentials,
       });
     } catch (_) {
       // Mesmo em falha de rede local, segue para a tela de login.
@@ -202,4 +283,16 @@ function setupLogout() {
 
     window.location.href = loginPage;
   });
+}
+
+function buildApiRequest(endpoint, fallbackPrefix = "") {
+  const api = window.FinanceApi;
+  const url = api?.buildApiUrl
+    ? api.buildApiUrl(endpoint, fallbackPrefix)
+    : new URL(endpoint, new URL(fallbackPrefix || "./", window.location.href)).toString();
+  const credentials = api?.getCredentialsMode
+    ? api.getCredentialsMode(url)
+    : "same-origin";
+
+  return { url, credentials };
 }

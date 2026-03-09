@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="api-base-url" content="" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
@@ -34,6 +35,7 @@
         id="form"
         action="../salvar.php"
         method="POST"
+        data-api-prefix="../"
         data-success-redirect="../index.html"
       >
         <div id="input_container">
@@ -207,6 +209,7 @@
       </form>
     </main>
 
-    <script src="src/javascript/cadastro.js?v=20260308-3"></script>
+    <script src="../src/js/runtime-config.js?v=20260309-1"></script>
+    <script src="src/javascript/cadastro.js?v=20260309-1"></script>
   </body>
 </html>

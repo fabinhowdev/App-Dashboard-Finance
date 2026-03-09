@@ -220,14 +220,21 @@ passwordIcons.forEach((icon) => {
 async function submitRegistration(formElement) {
   const submitButton = formElement.querySelector('button[type="submit"]');
   submitButton.disabled = true;
+  const apiPrefix =
+    window.FinanceApi?.resolveApiBase(formElement.dataset.apiPrefix || "") ||
+    (formElement.dataset.apiPrefix || "");
+  const endpoint = formElement.getAttribute("action") || "salvar.php";
+  const submitRequest = buildApiRequest(endpoint, apiPrefix);
 
   try {
-    const response = await fetch(formElement.action, {
+    const response = await fetch(submitRequest.url, {
       method: "POST",
+      credentials: submitRequest.credentials,
       body: new FormData(formElement),
     });
     const rawResponse = await response.text();
     const message = rawResponse.trim();
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
 
     // Quando a página roda em servidor estático, o PHP não executa e costuma voltar o código-fonte.
     if (message.startsWith("<?php")) {
@@ -236,11 +243,18 @@ async function submitRegistration(formElement) {
       );
     }
 
+    const startsWithHtml = /^<!doctype html|^<html/i.test(message);
+    if (startsWithHtml || (contentType.includes("text/html") && message.startsWith("<"))) {
+      throw new Error(
+        "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+      );
+    }
+
     let payload = null;
     try {
       payload = JSON.parse(message);
     } catch (_) {
-      throw new Error("Resposta inválida do servidor. Verifique se o PHP está ativo.");
+      throw new Error("Resposta inválida do servidor. Esperado JSON do backend.");
     }
 
     if (!response.ok || !payload.success) {
@@ -259,4 +273,16 @@ async function submitRegistration(formElement) {
   } finally {
     submitButton.disabled = false;
   }
+}
+
+function buildApiRequest(endpoint, fallbackPrefix = "") {
+  const api = window.FinanceApi;
+  const url = api?.buildApiUrl
+    ? api.buildApiUrl(endpoint, fallbackPrefix)
+    : new URL(endpoint, window.location.href).toString();
+  const credentials = api?.getCredentialsMode
+    ? api.getCredentialsMode(url)
+    : "same-origin";
+
+  return { url, credentials };
 }

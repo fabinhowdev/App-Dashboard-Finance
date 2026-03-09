@@ -2,10 +2,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("forgot_form");
   if (!form) return;
 
-  const apiPrefix = form.dataset.apiPrefix || "";
+  const apiPrefix =
+    window.FinanceApi?.resolveApiBase(form.dataset.apiPrefix || "") ||
+    (form.dataset.apiPrefix || "");
   const statusMessage = document.getElementById("status_message");
   const debugLinkContainer = document.getElementById("debug_link_container");
   const submitButton = form.querySelector('button[type="submit"]');
+  const forgotRequest = buildApiRequest("auth_forgot_password.php", apiPrefix);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -14,9 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (submitButton) submitButton.disabled = true;
 
     try {
-      const response = await fetch(`${apiPrefix}auth_forgot_password.php`, {
+      const response = await fetch(forgotRequest.url, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: forgotRequest.credentials,
         body: new FormData(form),
       });
       const payload = await parseJsonResponse(response);
@@ -67,16 +70,36 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function buildApiRequest(endpoint, fallbackPrefix = "") {
+  const api = window.FinanceApi;
+  const url = api?.buildApiUrl
+    ? api.buildApiUrl(endpoint, fallbackPrefix)
+    : new URL(endpoint, new URL(fallbackPrefix || "./", window.location.href)).toString();
+  const credentials = api?.getCredentialsMode
+    ? api.getCredentialsMode(url)
+    : "same-origin";
+
+  return { url, credentials };
+}
+
 async function parseJsonResponse(response) {
   const text = (await response.text()).trim();
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+
   if (text.startsWith("<?php")) {
     throw new Error("Servidor atual não executa PHP.");
+  }
+
+  const startsWithHtml = /^<!doctype html|^<html/i.test(text);
+  if (startsWithHtml || (contentType.includes("text/html") && text.startsWith("<"))) {
+    throw new Error(
+      "Servidor retornou HTML em vez de JSON. Em deploy estático (ex.: Netlify), o PHP não é executado.",
+    );
   }
 
   try {
     return JSON.parse(text);
   } catch (_) {
-    throw new Error("Resposta inválida do servidor.");
+    throw new Error("Resposta inválida do servidor. Esperado JSON do backend.");
   }
 }
-
