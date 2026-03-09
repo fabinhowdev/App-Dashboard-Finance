@@ -1,92 +1,90 @@
 const form = document.querySelector("#form");
 
-form.addEventListener("submit", function (e) {
-  e.preventDefault();
+if (form) {
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-  const fields = [
-    {
-      id: "name",
-      label: "Nome",
-      validator: nameIsValid,
-    },
-    {
-      id: "last_name",
-      label: "Sobrenome",
-      validator: nameIsValid,
-    },
-    {
-      id: "birthdate",
-      label: "Nascimento",
-      validator: dateIsValid,
-    },
-    {
-      id: "email",
-      label: "E-mail",
-      validator: emailIsValid,
-    },
-    {
-      id: "password",
-      label: "Senha",
-      validator: passwordIsSecure,
-    },
-    {
-      id: "confirm_password",
-      label: "Confirmar senha",
-      validator: passwordMatch,
-    },
-  ];
+    const fields = [
+      {
+        id: "name",
+        label: "Nome",
+        validator: nameIsValid,
+      },
+      {
+        id: "last_name",
+        label: "Sobrenome",
+        validator: nameIsValid,
+      },
+      {
+        id: "birthdate",
+        label: "Nascimento",
+        validator: dateIsValid,
+      },
+      {
+        id: "email",
+        label: "E-mail",
+        validator: emailIsValid,
+      },
+      {
+        id: "password",
+        label: "Senha",
+        validator: passwordIsSecure,
+      },
+      {
+        id: "confirm_password",
+        label: "Confirmar senha",
+        validator: passwordMatch,
+      },
+    ];
 
-  const errorIcon = '<i class="fa-solid fa-circle-exclamation"></i>';
+    const errorIcon = '<i class="fa-solid fa-circle-exclamation"></i>';
+    let formIsValid = true;
 
-  let formIsValid = true;
+    for (const field of fields) {
+      const input = document.getElementById(field.id);
+      const inputBox = input.closest(".input-box");
+      const inputValue = input.value;
 
-  for (const field of fields) {
-    const input = document.getElementById(field.id);
-    const inputBox = input.closest(".input-box");
-    const inputValue = input.value;
+      const errorSpan = inputBox.querySelector(".error");
+      errorSpan.innerHTML = "";
 
-    const errorSpan = inputBox.querySelector(".error");
-    errorSpan.innerHTML = "";
+      const fieldValidator = field.validator(inputValue);
 
-    const fieldValidator = field.validator(inputValue);
+      if (!fieldValidator.isValid) {
+        errorSpan.innerHTML = `${errorIcon} ${fieldValidator.errorMessage}`;
+        inputBox.classList.add("invalid");
+        inputBox.classList.remove("valid");
+        formIsValid = false;
+      } else {
+        inputBox.classList.remove("invalid");
+        inputBox.classList.add("valid");
+      }
+    }
 
-    if (!fieldValidator.isValid) {
-      errorSpan.innerHTML = `${errorIcon} ${fieldValidator.errorMessage}`;
-      inputBox.classList.add("invalid");
-      inputBox.classList.remove("valid");
+    const genders = document.getElementsByName("gender");
+    const radioContainer = document.querySelector(".radio-container");
+    const genderErrorSpan = radioContainer.querySelector(".error");
+    const selectedGender = [...genders].find((input) => input.checked);
+
+    if (!selectedGender) {
+      radioContainer.classList.add("invalid");
+      radioContainer.classList.remove("valid");
+      genderErrorSpan.innerHTML = `${errorIcon} Selecione um gênero!`;
       formIsValid = false;
     } else {
-      inputBox.classList.remove("invalid");
-      inputBox.classList.add("valid");
+      radioContainer.classList.add("valid");
+      radioContainer.classList.remove("invalid");
+      genderErrorSpan.innerHTML = "";
     }
-  }
 
-  const genders = document.getElementsByName("gender");
-  const radioContainer = document.querySelector(".radio-container");
-  const genderErrorSpan = radioContainer.querySelector(".error");
+    if (!formIsValid) return;
 
-  const selectedGender = [...genders].find((input) => input.checked);
-
-  if (!selectedGender) {
-    radioContainer.classList.add("invalid");
-    radioContainer.classList.remove("valid");
-    genderErrorSpan.innerHTML = `${errorIcon} Selecione um gênero!`;
-    formIsValid = false;
-  } else {
-    radioContainer.classList.add("valid");
-    radioContainer.classList.remove("invalid");
-    genderErrorSpan.innerHTML = "";
-  }
-
-  if (!formIsValid) return;
-
-  // Se chegou aqui, formulário válido — criar conta (simulação) e redirecionar ao login
-  alert("Conta criada com sucesso!");
-  location.href = "../login-dash/login.html";
-});
+    await submitRegistration(form);
+  });
+}
 
 function isEmpty(value) {
-  return value === "";
+  return value.trim() === "";
 }
 
 function nameIsValid(value) {
@@ -108,10 +106,10 @@ function nameIsValid(value) {
     return validator;
   }
 
-  const regex = /^[a-zA-Z]/;
+  const regex = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/;
   if (!regex.test(value)) {
     validator.isValid = false;
-    validator.errorMessage = "O campo deve conter apenas letras!";
+    validator.errorMessage = "Use apenas letras, espaço, apóstrofo e hífen!";
   }
 
   return validator;
@@ -152,7 +150,7 @@ function emailIsValid(value) {
     return validator;
   }
 
-  const regex = new RegExp("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   if (!regex.test(value)) {
     validator.isValid = false;
     validator.errorMessage = "O e-mail precisa ser válido!";
@@ -174,9 +172,7 @@ function passwordIsSecure(value) {
     return validator;
   }
 
-  const regex = new RegExp(
-    "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})",
-  );
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
 
   if (!regex.test(value)) {
     validator.isValid = false;
@@ -220,3 +216,47 @@ passwordIcons.forEach((icon) => {
     this.classList.toggle("fa-eye");
   });
 });
+
+async function submitRegistration(formElement) {
+  const submitButton = formElement.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+
+  try {
+    const response = await fetch(formElement.action, {
+      method: "POST",
+      body: new FormData(formElement),
+    });
+    const rawResponse = await response.text();
+    const message = rawResponse.trim();
+
+    // Quando a página roda em servidor estático, o PHP não executa e costuma voltar o código-fonte.
+    if (message.startsWith("<?php")) {
+      throw new Error(
+        "Servidor atual não executa PHP. Rode o projeto em Apache/XAMPP ou php -S.",
+      );
+    }
+
+    let payload = null;
+    try {
+      payload = JSON.parse(message);
+    } catch (_) {
+      throw new Error("Resposta inválida do servidor. Verifique se o PHP está ativo.");
+    }
+
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.message || "Falha ao cadastrar.");
+    }
+
+    if (!payload.inserted_id) {
+      throw new Error("Cadastro sem confirmação de insert no banco.");
+    }
+
+    alert(payload.message || "Conta criada com sucesso!");
+    const redirect = formElement.dataset.successRedirect || "../index.html";
+    window.location.href = redirect;
+  } catch (error) {
+    alert(error.message || "Erro ao enviar cadastro.");
+  } finally {
+    submitButton.disabled = false;
+  }
+}

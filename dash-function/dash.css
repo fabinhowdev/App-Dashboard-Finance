@@ -78,6 +78,12 @@ li {
   color: var(--text);
 }
 
+.welcome-user {
+  margin-top: 6px;
+  opacity: 0.9;
+  font-size: 14px;
+}
+
 /* Logout button (top-right) */
 button.logout {
   position: fixed;

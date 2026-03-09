@@ -16,6 +16,15 @@ try {
 }
 let chart;
 
+const loginPage = "../index.html";
+const authStatusUrl = "../auth_status.php";
+const logoutUrl = "../auth_logout.php";
+const welcomeUserEl = document.getElementById("welcome_user");
+const logoutButton = document.getElementById("logout_btn");
+
+verifyAuthenticatedUser();
+setupLogout();
+
 function parseAmount(value) {
   const normalized = String(value).trim().replace(",", ".");
   return Number(normalized);
@@ -156,3 +165,41 @@ listEl.addEventListener("click", (e) => {
 });
 
 render();
+
+async function verifyAuthenticatedUser() {
+  try {
+    const response = await fetch(authStatusUrl, {
+      credentials: "same-origin",
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.authenticated) {
+      window.location.href = loginPage;
+      return;
+    }
+
+    if (welcomeUserEl) {
+      const nome = data.user?.nome || data.user?.email || "usuário";
+      welcomeUserEl.textContent = `Olá, ${nome}`;
+    }
+  } catch (_) {
+    window.location.href = loginPage;
+  }
+}
+
+function setupLogout() {
+  if (!logoutButton) return;
+
+  logoutButton.addEventListener("click", async () => {
+    try {
+      await fetch(logoutUrl, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } catch (_) {
+      // Mesmo em falha de rede local, segue para a tela de login.
+    }
+
+    window.location.href = loginPage;
+  });
+}

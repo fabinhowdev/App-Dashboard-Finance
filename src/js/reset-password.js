@@ -1,22 +1,40 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.querySelector("form#form");
+  const form = document.getElementById("reset_form");
   if (!form) return;
 
-  const statusMessage = document.getElementById("status_message");
-  const redirect = form.dataset.redirect || "dash-function/dash.html";
   const apiPrefix = form.dataset.apiPrefix || "";
+  const statusMessage = document.getElementById("status_message");
   const submitButton = form.querySelector('button[type="submit"]');
+  const tokenInput = document.getElementById("token");
+  const urlToken = new URLSearchParams(window.location.search).get("token") || "";
 
   setupPasswordToggle();
-  checkExistingSession();
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  if (!urlToken) {
+    setStatus("Link de redefinição inválido.", "error");
+    if (submitButton) submitButton.disabled = true;
+    return;
+  }
+
+  tokenInput.value = urlToken;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
     setStatus("");
     if (submitButton) submitButton.disabled = true;
 
+    const password = (document.getElementById("password") || {}).value || "";
+    const confirmPassword =
+      (document.getElementById("confirm_password") || {}).value || "";
+
+    if (password !== confirmPassword) {
+      setStatus("As senhas não coincidem.", "error");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+
     try {
-      const response = await fetch(`${apiPrefix}auth_login.php`, {
+      const response = await fetch(`${apiPrefix}auth_reset_password.php`, {
         method: "POST",
         credentials: "same-origin",
         body: new FormData(form),
@@ -24,32 +42,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const payload = await parseJsonResponse(response);
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.message || "Falha no login.");
+        throw new Error(payload.message || "Falha ao redefinir a senha.");
       }
 
-      setStatus(payload.message || "Login realizado com sucesso!", "success");
-      window.location.href = payload.redirect || redirect;
+      setStatus(payload.message || "Senha redefinida com sucesso.", "success");
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 1200);
     } catch (error) {
-      setStatus(error.message || "Não foi possível fazer login.", "error");
+      setStatus(error.message || "Não foi possível redefinir sua senha.", "error");
     } finally {
       if (submitButton) submitButton.disabled = false;
     }
   });
-
-  async function checkExistingSession() {
-    try {
-      const response = await fetch(`${apiPrefix}auth_status.php`, {
-        credentials: "same-origin",
-      });
-      const payload = await parseJsonResponse(response);
-
-      if (response.ok && payload.authenticated) {
-        window.location.href = redirect;
-      }
-    } catch (_) {
-      // Ignora erro de verificação de sessão para não bloquear login manual.
-    }
-  }
 
   function setStatus(message, type = "") {
     if (!statusMessage) {
@@ -65,12 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupPasswordToggle() {
   const passwordIcons = document.querySelectorAll(".password-icon");
-
   passwordIcons.forEach((icon) => {
-    icon.setAttribute("role", "button");
-    icon.setAttribute("tabindex", "0");
-    icon.setAttribute("aria-pressed", "false");
-
     const toggle = () => {
       const input = icon.parentElement?.querySelector("input");
       if (!input) return;
@@ -79,22 +79,14 @@ function setupPasswordToggle() {
       input.type = isPassword ? "text" : "password";
       icon.classList.toggle("fa-eye-slash", !isPassword);
       icon.classList.toggle("fa-eye", isPassword);
-      icon.setAttribute("aria-pressed", String(isPassword));
     };
 
     icon.addEventListener("click", toggle);
-    icon.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggle();
-      }
-    });
   });
 }
 
 async function parseJsonResponse(response) {
   const text = (await response.text()).trim();
-
   if (text.startsWith("<?php")) {
     throw new Error("Servidor atual não executa PHP.");
   }
@@ -105,3 +97,4 @@ async function parseJsonResponse(response) {
     throw new Error("Resposta inválida do servidor.");
   }
 }
+
